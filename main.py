@@ -1,3 +1,7 @@
+import ssl
+ssl._create_default_https_context = ssl._create_unverified_context
+#ho aggiunto queste due righe con gemini, perchè non riuscivo a far funzionare flet
+
 import flet as ft
 from alert import AlertManager
 from deposito_strumenti import DepositoStrumenti
@@ -37,6 +41,11 @@ def main(page: ft.Page):
 
     # Tutti i TextField per le info necessarie per aggiungere un nuovo strumento (tipo, marca, anno, contatore posti)
     # TODO
+    input_tipo = ft.TextField(label="Tipo", width=180)
+    input_marca = ft.TextField(label="Marca", width=180)
+    input_anno = ft.TextField(label="Anno", width=100)
+
+    input_valore = ft.TextField(value="100", label="Valore (€)", width=120, text_align=ft.TextAlign.CENTER)
 
     # --- FUNZIONI APP ---
     def aggiorna_lista_strumenti():
@@ -56,6 +65,65 @@ def main(page: ft.Page):
 
     # Handlers per la gestione dei pulsanti utili all'inserimento di un nuovo strumento
     # TODO
+    def decrementa_valore(e):
+        try:
+            val = int(input_valore.value)
+            if val >= 10:
+                input_valore.value = str(val - 10)
+                page.update()
+        except ValueError:
+            input_valore.value = "0"
+            page.update()
+
+    def incrementa_valore(e):
+        try:
+            val = int(input_valore.value)
+            input_valore.value = str(val + 10)
+            page.update()
+        except ValueError:
+            input_valore.value = "0"
+            page.update()
+
+    def aggiungi_strumento(e):
+        tipo = input_tipo.value.strip()
+        marca = input_marca.value.strip()
+        str_anno = input_anno.value.strip()
+        str_valore = input_valore.value.strip()
+
+        # Controllo campi vuoti
+        if not tipo or not marca or not str_anno or not str_valore:
+            alert.show_alert("Compilare tutti i campi per aggiungere lo strumento.")
+            return
+
+        # Controllo validità numerica per l'anno
+        try:
+            anno = int(str_anno)
+        except ValueError:
+            alert.show_alert("Errore: Il campo 'Anno' deve essere un numero intero.")
+            return
+
+        # Controllo validità numerica per il valore
+        try:
+            valore = float(str_valore)
+        except ValueError:
+            alert.show_alert("Errore: Il 'Valore' deve essere un numero valido.")
+            return
+
+        # Aggiunta al deposito
+        try:
+            deposito.aggiungi_strumento(tipo, marca, anno, valore)
+        except Exception as ex:
+            alert.show_alert(f"Errore nell'aggiunta dello strumento: {ex}")
+            return
+
+        # Svuota i campi TextField
+        input_tipo.value = ""
+        input_marca.value = ""
+        input_anno.value = ""
+        input_valore.value = "0"
+
+        # Aggiorna la lista a schermo
+        aggiorna_lista_strumenti()
 
     # --- EVENTI ---
     toggle_cambia_tema = ft.Switch(label="Tema scuro", value=True, on_change=cambia_tema)
@@ -63,6 +131,9 @@ def main(page: ft.Page):
 
     # Pulsanti per la gestione dell'inserimento di un nuovo strumento
     # TODO
+    btn_meno = ft.Button("-", on_click=decrementa_valore)
+    btn_piu = ft.Button("+", on_click=incrementa_valore)
+    pulsante_aggiungi_strumento = ft.Button("Aggiungi strumento", on_click=aggiungi_strumento)
 
     # --- LAYOUT ---
     page.add(
@@ -81,7 +152,23 @@ def main(page: ft.Page):
 
         # Sezione 3
         # TODO
-
+        ft.Divider(),
+        ft.Text("Aggiungi Nuovo Strumento", size=20),
+        ft.Row(
+            controls=[input_tipo, input_marca, input_anno],
+            alignment=ft.MainAxisAlignment.CENTER
+        ),
+        ft.Row(
+            controls=[
+                ft.Text("Valore in euro:"),
+                btn_meno,
+                input_valore,
+                btn_piu,
+                pulsante_aggiungi_strumento
+            ],
+            alignment=ft.MainAxisAlignment.CENTER,
+            spacing=10
+        ),
         # Sezione 4
         ft.Divider(),
         ft.Text("Strumenti", size=20),
